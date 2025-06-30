@@ -1,7 +1,5 @@
 #include <iostream>
 #include <cstdlib>
-#include <vector>
-#include <algorithm>
 using namespace std;
 
 const int student_amount = 100;
@@ -11,16 +9,11 @@ string student_names[student_amount][student_per_page];
 char student_grades[student_amount][student_per_page];
 
 void Add_record(string student_name, char student_grade);
+bool Remove_record(string student_name);
 double Calculate_Average_Grade();
 void Count_Grade(char grade, int &A_grades, int &B_grades, int &C_grades, int &D_grades, int &F_grades);
 void Show_Highest_To_Lowest();
 int GetGradeIndex(char grade);
-
-struct StudentRecord
-{
-    string name;
-    char grade;
-};
 
 int main()
 {
@@ -33,7 +26,7 @@ int main()
 
     do
     {
-        cout << "Welcome To Student Grade Manager! what would you like to do? (view_records/add_record/show_average_grade/show_highest_to_lowest/exit):\n";
+        cout << "Welcome To Student Grade Manager! what would you like to do? (view_records/add_record/remove_record/show_average_grade/show_highest_to_lowest/exit):\n";
         getline(cin, op);
 
         if (op == "view_records")
@@ -62,7 +55,21 @@ int main()
             cout << "Enter Student Grade (A-F): ";
             cin >> student_grade;
 
+            cin.ignore(); // clear newline from buffer
+
             Add_record(student_name, student_grade);
+        }
+        else if (op == "remove_record")
+        {
+            string student_name;
+            cout << "Enter Student Name to Remove: ";
+            cin >> student_name;
+            cin.ignore();
+
+            if (Remove_record(student_name))
+                cout << "Student " << student_name << " removed successfully.\n";
+            else
+                cout << "Student " << student_name << " not found.\n";
         }
         else if (op == "show_average_grade")
         {
@@ -101,6 +108,23 @@ void Add_record(string student_name, char student_grade)
     cout << "Database Full! Cannot add more students." << endl;
 }
 
+bool Remove_record(string student_name)
+{
+    for (int row = 0; row < student_amount; row++)
+    {
+        for (int column = 0; column < student_per_page; column++)
+        {
+            if (student_names[row][column] == student_name)
+            {
+                student_names[row][column].clear();
+                student_grades[row][column] = '\0';
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 void Count_Grade(char grade, int &A_grades, int &B_grades, int &C_grades, int &D_grades, int &F_grades)
 {
     switch (grade)
@@ -121,7 +145,6 @@ void Count_Grade(char grade, int &A_grades, int &B_grades, int &C_grades, int &D
         F_grades++;
         break;
     default:
-        // Ignore invalid grades
         break;
     }
 }
@@ -136,7 +159,7 @@ double Calculate_Average_Grade()
         for (int column = 0; column < student_per_page; column++)
         {
             char grade = student_grades[row][column];
-            if (grade != '\0' && grade >= 'A' && grade <= 'F') // check valid grade letters
+            if (grade != '\0' && grade >= 'A' && grade <= 'F')
             {
                 Count_Grade(grade, A_grades, B_grades, C_grades, D_grades, F_grades);
                 total_grades++;
@@ -168,42 +191,56 @@ int GetGradeIndex(char grade)
     case 'F':
         return 0;
     default:
-        return -1; // Invalid grade
+        return -1;
     }
-}
-
-bool CompareStudents(const StudentRecord &a, const StudentRecord &b)
-{
-    return GetGradeIndex(a.grade) > GetGradeIndex(b.grade);
 }
 
 void Show_Highest_To_Lowest()
 {
-    vector<StudentRecord> students;
+    // Create two arrays to store students and grades temporarily
+    string temp_names[student_amount * student_per_page];
+    char temp_grades[student_amount * student_per_page];
+    int count = 0;
 
-    // Collect all valid students into vector
+    // Flatten 2D arrays into 1D arrays
     for (int row = 0; row < student_amount; row++)
     {
-        for (int column = 0; column < student_per_page; column++)
+        for (int col = 0; col < student_per_page; col++)
         {
-            if (!student_names[row][column].empty())
+            if (!student_names[row][col].empty())
             {
-                char grade = student_grades[row][column];
-                if (grade != 'N' && GetGradeIndex(grade) != -1) // skip invalid grades
-                {
-                    students.push_back({student_names[row][column], grade});
-                }
+                temp_names[count] = student_names[row][col];
+                temp_grades[count] = student_grades[row][col];
+                count++;
             }
         }
     }
 
-    // Sort students by grade descending
-    sort(students.begin(), students.end(), CompareStudents);
-
-    cout << "Grades Highest To Lowest:\n";
-    for (const auto &student : students)
+    // Simple bubble sort by grade descending
+    for (int i = 0; i < count - 1; i++)
     {
-        cout << "Student Name: " << student.name << endl;
-        cout << "Student Grade: " << student.grade << endl;
+        for (int j = 0; j < count - i - 1; j++)
+        {
+            if (GetGradeIndex(temp_grades[j]) < GetGradeIndex(temp_grades[j + 1]))
+            {
+                // Swap grades
+                char temp_grade = temp_grades[j];
+                temp_grades[j] = temp_grades[j + 1];
+                temp_grades[j + 1] = temp_grade;
+
+                // Swap corresponding names
+                string temp_name = temp_names[j];
+                temp_names[j] = temp_names[j + 1];
+                temp_names[j + 1] = temp_name;
+            }
+        }
+    }
+
+    // Print sorted list
+    cout << "Grades Highest To Lowest:\n";
+    for (int i = 0; i < count; i++)
+    {
+        cout << "Student Name: " << temp_names[i] << endl;
+        cout << "Student Grade: " << temp_grades[i] << endl;
     }
 }
